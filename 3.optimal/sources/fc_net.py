@@ -1,9 +1,9 @@
 from builtins import range
 from builtins import object
 import numpy as np
-
 from .layers import *
-
+from .layers_norm import *
+from .layers_dropout import *
 
 class FullyConnectedNet(object):
     """Class for a multi-layer fully connected neural network.
@@ -71,9 +71,18 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to ones and shift     #
         # parameters should be initialized to zeros.                               #
         ############################################################################
+        # IMPORTANT: DO NOT DEFINE ANYTHING MORE than NEEDED! Or it'll raise EXCEPTION.
         # *****START OF YOUR CODE *****
 
-        pass
+        layer_dims = [input_dim] + hidden_dims + [num_classes]
+        for i in range(self.num_layers):
+            self.params['W' + str(i + 1)] = np.random.normal(0, weight_scale, size=(layer_dims[i], layer_dims[i + 1]))
+            self.params['b' + str(i + 1)] = np.zeros(layer_dims[i + 1])
+
+        if self.normalization: # == "batchnorm" or "layernorm"
+            for i in range(self.num_layers-1):
+                self.params['gamma' + str(i + 1)] = np.ones(layer_dims[i + 1])
+                self.params['beta' + str(i + 1)] = np.zeros(layer_dims[i + 1])
 
         # *****END OF YOUR CODE *****
 
@@ -143,9 +152,28 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         # Recall the architecture: {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
+        # IMPORTANT: The outputs from the last layer of the network should not be normalized.
         # *****START OF YOUR CODE *****
-
-        pass
+        
+        caches = {}
+        out = X
+        for i in range(1, self.num_layers):
+            out, cache = affine_forward(out, self.params['W'+str(i)], self.params['b'+str(i)])
+            caches['affine'+str(i)] = cache
+            if self.normalization == "batchnorm":
+                out, cache = batchnorm_forward(out, self.params['gamma' + str(i)], self.params['beta' + str(i)], self.bn_params[i-1])
+                caches['batchnorm'+str(i)] = cache
+            if self.normalization == "layernorm":
+                out, cache = layernorm_forward(out, self.params['gamma' + str(i)], self.params['beta' + str(i)], self.bn_params[i-1])
+                caches['layernorm'+str(i)] = cache
+            out, cache = relu_forward(out)
+            caches['relu'+str(i)] = cache
+            if self.use_dropout:
+                out, cache = dropout_forward(out, self.dropout_param)
+            caches['dropout'+str(i)] = cache
+        i = self.num_layers
+        scores, cache = affine_forward(out, self.params['W'+str(i)], self.params['b'+str(i)])
+        caches['affine'+str(i)] = cache
 
         # *****END OF YOUR CODE *****
 
@@ -169,8 +197,31 @@ class FullyConnectedNet(object):
         ############################################################################
         # Recall the architecture: {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
         # *****START OF YOUR CODE *****
+        
+        caches['affine' + str(i)] = cache # above i = self.num_layers
+        loss, dx = softmax_loss(scores, y)
+        loss += 0.5 * self.reg * np.sum(self.params['W' + str(i)]**2)
 
-        pass
+        dx, dw, db = affine_backward(dx, caches['affine' + str(i)])
+        grads['W' + str(i)] = dw + self.reg * self.params['W' + str(i)]
+        grads['b' + str(i)] = db
+
+        for i in range(self.num_layers - 1, 0, -1):
+            loss += 0.5 * self.reg * np.sum(self.params['W' + str(i)]**2)
+            if self.use_dropout:
+                dx = dropout_backward(dx, caches['dropout'+str(i)])
+            dx = relu_backward(dx, caches['relu' + str(i)])
+            if self.normalization == "batchnorm":
+                dx, dgamma, dbeta = batchnorm_backward(dx, caches['batchnorm'+str(i)]) 
+                grads['gamma' + str(i)] = dgamma
+                grads['beta' + str(i)] = dbeta
+            if self.normalization == "layernorm":
+                dx, dgamma, dbeta = layernorm_backward(dx, caches['layernorm'+str(i)]) 
+                grads['gamma' + str(i)] = dgamma
+                grads['beta' + str(i)] = dbeta
+            dx, dw, db = affine_backward(dx, caches['affine'+str(i)])
+            grads['W' + str(i)] = dw + self.reg * self.params['W' + str(i)]
+            grads['b' + str(i)] = db
 
         # *****END OF YOUR CODE *****
         return loss, grads

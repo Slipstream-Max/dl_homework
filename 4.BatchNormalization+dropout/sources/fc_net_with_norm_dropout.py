@@ -76,8 +76,6 @@ class FullyConnectedNet(object):
         # IMPORTANT: DO NOT DEFINE ANYTHING MORE than NEEDED! Or it'll raise EXCEPTION.
         # *****START OF YOUR CODE *****
 
-        pass
-
         layer_dims = [input_dim] + hidden_dims + [num_classes]
         for i in range(self.num_layers):
             self.params['W' + str(i + 1)] = np.random.normal(0, weight_scale, size=(layer_dims[i], layer_dims[i + 1]))
@@ -158,8 +156,6 @@ class FullyConnectedNet(object):
         # Recall the architecture: {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
         # IMPORTANT: The outputs from the last layer of the network should not be normalized.
         # *****START OF YOUR CODE *****
-
-        pass
         
         caches = {}
         out = X
@@ -203,8 +199,6 @@ class FullyConnectedNet(object):
         ############################################################################
         # Recall the architecture: {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
         # *****START OF YOUR CODE *****
-
-        pass
         
         caches['affine' + str(i)] = cache # above i = self.num_layers
         loss, dx = softmax_loss(scores, y)
