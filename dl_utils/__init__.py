@@ -68,3 +68,7 @@ try:
     )
 except ImportError:
     pass
+
+import os
+
+DATASETS_PATH = os.path.join(os.path.dirname(__file__), "datasets")

@@ -1,7 +1,4 @@
-from builtins import range
 import numpy as np
-from .layers_norm import *
-
 
 
 def dropout_forward(x, dropout_param):
@@ -40,8 +37,8 @@ def dropout_forward(x, dropout_param):
         # Store the dropout mask in the mask variable.                        #
         #######################################################################
         # *****START OF YOUR CODE *****
-
-        pass
+        mask = (np.random.rand(*x.shape) < p) / p # make sure output is scaled
+        out = x * mask
 
         # *****END OF YOUR CODE *****
     elif mode == "test":
@@ -50,7 +47,7 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # *****START OF YOUR CODE *****
 
-        pass
+        out = x
 
         # *****END OF YOUR CODE *****
 
@@ -77,7 +74,7 @@ def dropout_backward(dout, cache):
         #######################################################################
         # *****START OF YOUR CODE *****
 
-        pass
+        dx = dout * mask
 
         # *****END OF YOUR CODE *****
     elif mode == "test":

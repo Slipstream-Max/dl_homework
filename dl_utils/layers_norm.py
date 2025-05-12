@@ -194,7 +194,13 @@ def layernorm_forward(x, gamma, beta, ln_param):
     ###########################################################################
     # *****START OF YOUR CODE *****
 
-    pass
+    x_mean = np.mean(x, axis=1, keepdims=True)
+    x_var = np.var(x, axis=1, keepdims=True)
+    x_std = np.sqrt(x_var+eps)
+    x_norm = (x-x_mean)/ x_std
+    out = gamma*x_norm + beta
+
+    cache = (x, x_mean, x_var, x_std, x_norm, gamma, beta, eps)
 
     # *****END OF YOUR CODE *****
     return out, cache
@@ -225,7 +231,24 @@ def layernorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE *****
 
-    pass
+    x, x_mean, x_var, x_std, x_norm, gamma, beta, eps = cache
+
+    # dbeta: sum over batch
+    dbeta = np.sum(dout, axis=0)
+
+    # dgamma: sum over batch of (dout * x_norm)
+    dgamma = np.sum(dout * x_norm, axis=0)
+
+    # dx_norm: upstream gradient on normalized x
+    dx_norm = dout * gamma
+
+    # dvar,dmean
+    dxmu = dx_norm / x_std
+    dvar = np.sum(dx_norm * (x - x_mean) * -0.5 * (x_var + eps) ** (-1.5), axis=1, keepdims=True)
+    dmean = np.sum(-dxmu, axis=1, keepdims=True) + dvar * np.mean(-2. * (x - x_mean), axis=1, keepdims=True)
+
+    # dx
+    dx = dxmu + dvar * 2.0 * (x - x_mean) / x.shape[1] + dmean / x.shape[1]
 
     # *****END OF YOUR CODE *****
     return dx, dgamma, dbeta

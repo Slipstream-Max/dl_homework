@@ -1,36 +1,21 @@
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, Extension, find_packages
+from Cython.Build import cythonize
 import numpy
 
-# # Try to include Cython extension if available
-# try:
-#     from Cython.Build import cythonize
-#     extensions = [
-#         Extension(
-#             "dl_utils.im2col_cython", ["dl_utils/im2col_cython.pyx"],
-#             include_dirs=[numpy.get_include()]
-#         ),
-#     ]
-#     ext_modules = cythonize(extensions)
-# except ImportError:
-#     ext_modules = []
+extensions = [
+    Extension(
+        "dl_utils.im2col_cython",
+        ["dl_utils/im2col_cython.pyx"],
+        include_dirs=[numpy.get_include()],
+    ),
+]
 
 setup(
     name="dl_utils",
-    version="0.1.0",
-    description="Deep Learning Utilities",
-    author="Your Name",
-    author_email="your.email@example.com",
+    version="0.1",
     packages=find_packages(),
+    package_data={"dl_utils": ["datasets/cifar-10-batches-py/*"]},
     include_package_data=True,
-    package_data={
-        'dl_utils': ['datasets/*'],
-    },
-    install_requires=[
-        'numpy',
-        'scipy',
-        'matplotlib',
-        'imageio',
-        'six',
-    ],
-    # ext_modules=ext_modules,
+    ext_modules=cythonize(extensions),
+    install_requires=["numpy", "cython"],
 )

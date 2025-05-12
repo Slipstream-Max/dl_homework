@@ -1,6 +1,8 @@
+from ast import Str
 from builtins import range
 import numpy as np
 from .layers import *
+
 
 def conv_forward_naive(x, w, b, conv_param):
     """A naive implementation of the forward pass for a convolutional layer.
@@ -35,8 +37,27 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     # *****START OF YOUR CODE *****
 
-    pass
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+    stride = conv_param["stride"]
+    pad = conv_param["pad"]
 
+    H_out = 1 + (H + 2 * pad - HH) // stride
+    W_out = 1 + (W + 2 * pad - WW) // stride
+
+    out = np.zeros((N, F, H_out, W_out))
+
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode="constant")
+
+    for n in range(N):
+        for f in range(F):
+            for i in range(H_out):
+                for j in range(W_out):
+                    x_region = x_padded[
+                        n, :, i * stride : i * stride + HH, j * stride : j * stride + WW
+                    ]
+                    out[n, f, i, j] = np.sum(x_region * w[f]) + b[f]
+    x = x_padded
     # *****END OF YOUR CODE *****
     cache = (x, w, b, conv_param)
     return out, cache
@@ -46,7 +67,7 @@ def conv_backward_naive(dout, cache):
     """A naive implementation of the backward pass for a convolutional layer.
 
     Inputs:
-    - dout: Upstream derivatives, of shape (N, F, H', W') 
+    - dout: Upstream derivatives, of shape (N, F, H', W')
     - cache: A tuple of (x, w, b, conv_param) as in conv_forward_naive
 
     Returns a tuple of:
@@ -60,7 +81,30 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE *****
 
-    pass
+    x, w, b, conv_param = cache
+    N, F, H_out, W_out = dout.shape
+    _, _, HH, WW = w.shape
+    stride = conv_param["stride"]
+    pad = conv_param["pad"]
+
+    dx = np.zeros_like(x)
+    dw = np.zeros_like(w)
+    db = np.zeros_like(b)
+
+    for n in range(N):
+        for f in range(F):
+            for i in range(H_out):
+                for j in range(W_out):
+                    x_region = x[
+                        n, :, i * stride : i * stride + HH, j * stride : j * stride + WW
+                    ]
+                    dw[f] += dout[n, f, i, j] * x_region
+                    db[f] += dout[n, f, i, j]
+                    dx[
+                        n, :, i * stride : i * stride + HH, j * stride : j * stride + WW
+                    ] += w[f] * dout[n, f, i, j]
+
+    dx = dx[:, :, pad:-pad, pad:-pad]
 
     # *****END OF YOUR CODE *****
     return dx, dw, db
@@ -92,7 +136,22 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE *****
 
-    pass
+    N, C, H, W = x.shape
+    pool_height = pool_param["pool_height"]
+    pool_width = pool_param["pool_width"]
+    stride = pool_param["stride"]
+
+    H_out = 1 + (H - pool_height) // stride
+    W_out = 1 + (W - pool_width) // stride
+
+    out = np.zeros((N, C, H_out, W_out))
+
+    for n in range(N):
+        for c in range(C):
+            for i in range(H_out):
+                for j in range(W_out):
+                    x_region = x[n, c, i * stride : i * stride + pool_height, j * stride : j * stride + pool_width]
+                    out[n, c, i, j] = np.max(x_region)
 
     # *****END OF YOUR CODE *****
     cache = (x, pool_param)
@@ -115,8 +174,21 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE *****
 
-    pass 
-    
+    x, pool_param = cache
+    N, C, H_out, W_out = dout.shape
+    pool_height = pool_param["pool_height"]
+    pool_width = pool_param["pool_width"]
+    stride = pool_param["stride"]
+
+    dx = np.zeros_like(x)
+
+    for n in range(N):
+        for c in range(C):
+            for i in range(H_out):
+                for j in range(W_out):
+                    x_region = x[n, c, i * stride : i * stride + pool_height, j * stride : j * stride + pool_width]
+                    max_idx = np.unravel_index(np.argmax(x_region), x_region.shape)
+                    dx[n, c, i * stride + max_idx[0], j * stride + max_idx[1]] += dout[n, c, i, j]
+
     # *****END OF YOUR CODE *****
     return dx
-
