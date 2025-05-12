@@ -1,3 +1,4 @@
+from functools import cache
 import numpy as np
 
 """
@@ -68,10 +69,17 @@ def sgd_momentum(w, dw, config=None):
     # the next_w variable. You should also use and update the velocity v.     #
     ###########################################################################
     # *****START OF YOUR CODE *****
-
-    pass
+    # this impl might be a variant by Sutskever
+    m = config.get('momentum')
+    lr = config.get('learning_rate')
+    v = m * v - lr * dw
+    next_w = w + v
 
     # *****END OF YOUR CODE *****
+    # note that this impl satisfied cs231n is not accurate
+    # in pytorch should be like this
+    # v = m * v + dw
+    # next_w + w - v
     config["velocity"] = v
 
     return next_w, config
@@ -104,8 +112,13 @@ def rmsprop(w, dw, config=None):
     ###########################################################################
     # *****START OF YOUR CODE *****
 
-    pass
-
+    cache = config.get('cache')
+    dr = config.get('decay_rate')
+    lr = config.get('learning_rate')
+    eps = config.get('epsilon')
+    cache = dr *cache + (1 - dr) *dw**2
+    next_w = w-(lr * dw / (np.sqrt(cache)+eps))
+    config['cache'] = cache
     # *****END OF YOUR CODE *****
 
     return next_w, config
@@ -146,7 +159,16 @@ def adam(w, dw, config=None):
     ###########################################################################
     # *****START OF YOUR CODE *****
 
-    pass
+    t = config["t"] + 1
+    m = config["beta1"] * config["m"] + (1 - config["beta1"]) * dw
+    mt = m / (1 - config["beta1"] ** t)
+    v = config["beta2"] * config["v"] + (1 - config["beta2"]) * dw ** 2
+    vt = v / (1 - config["beta2"] ** t)
+    next_w = w - config["learning_rate"] * mt / (np.sqrt(vt) + config["epsilon"])
+
+    config["t"] = t
+    config["m"] = m
+    config["v"] = v
 
     # *****END OF YOUR CODE *****
 

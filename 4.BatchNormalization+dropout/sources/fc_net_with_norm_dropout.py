@@ -104,7 +104,7 @@ class FullyConnectedNet(object):
         # pass of the second batch normalization layer, etc.
         self.bn_params = []
         if self.normalization == "batchnorm":
-            self.bn_params = [{"mode": "train"} for i in range(self.num_layers - 1)]
+            self.bn_params = [{"mode": "train", "eps": 1e-5, "momentum": 0.9} for i in range(self.num_layers - 1)]
         if self.normalization == "layernorm":
             self.bn_params = [{} for i in range(self.num_layers - 1)]
 

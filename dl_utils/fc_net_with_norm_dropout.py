@@ -1,6 +1,8 @@
 import numpy as np
 
 from .layers import *
+from .layers_norm import *
+from .layers_dropout import *
 
 
 class FullyConnectedNet(object):
