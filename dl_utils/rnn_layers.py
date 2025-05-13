@@ -308,7 +308,19 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     #############################################################################
     # *****START OF YOUR CODE *****
 
-    pass
+    concat_input = np.dot(x, Wx) + np.dot(prev_h, Wh) + b
+
+    H = prev_h.shape[1]
+    i = sigmoid(concat_input[:, :H])  # Input gate
+    f = sigmoid(concat_input[:, H:2*H])  # Forget gate
+    o = sigmoid(concat_input[:, 2*H:3*H])  # Output gate
+    g = np.tanh(concat_input[:, 3*H:4*H])  # Candidate cell state
+
+    next_c = f * prev_c + i * g
+    next_h = o * np.tanh(next_c)
+
+    cache = (x, prev_h, prev_c, Wx, Wh, b, i, f, o, g, next_c)
+
 
     # *****END OF YOUR CODE *****
 
@@ -340,7 +352,40 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
     #############################################################################
     # *****START OF YOUR CODE *****
 
-    pass
+    x, prev_h, prev_c, Wx, Wh, b, i, f, o, g, next_c = cache
+
+    # Compute gradient of next_h with respect to o and tanh(next_c)
+    dnext_h_o = np.tanh(next_c) * dnext_h
+    dnext_h_tanh_next_c = o * dnext_h
+
+    # Compute gradient of tanh(next_c) (using chain rule)
+    dtanh_next_c = dnext_h_tanh_next_c + dnext_c  # Also includes gradient from next_c
+    dnext_c_from_tanh = dtanh_next_c * (1 - np.tanh(next_c) ** 2)
+
+    # Compute gradients for gates and candidate cell state
+    di = g * dnext_c_from_tanh
+    df = prev_c * dnext_c_from_tanh
+    do = dnext_h_o
+    dg = i * dnext_c_from_tanh
+
+    # Compute gradient of prev_c (from forget gate and next_c)
+    dprev_c = f * dnext_c_from_tanh
+
+    # Compute gradients for gate activations (sigmoid for i, f, o; tanh for g)
+    di_input = di * i * (1 - i)
+    df_input = df * f * (1 - f)
+    do_input = do * o * (1 - o)
+    dg_input = dg * (1 - g ** 2)
+
+    # Concatenate gate gradients
+    dconcat_input = np.hstack([di_input, df_input, do_input, dg_input])
+
+    # Compute gradients for input, previous hidden state, and parameters
+    dx = np.dot(dconcat_input, Wx.T)
+    dprev_h = np.dot(dconcat_input, Wh.T)
+    dWx = np.dot(x.T, dconcat_input)
+    dWh = np.dot(prev_h.T, dconcat_input)
+    db = np.sum(dconcat_input, axis=0)
 
     # *****END OF YOUR CODE *****
 
@@ -376,11 +421,37 @@ def lstm_forward(x, h0, Wx, Wh, b):
     #############################################################################
     # *****START OF YOUR CODE *****
 
-    pass
+    # Initialize dimensions
+    N, T, D = x.shape
+    H = h0.shape[1]
+
+    # Initialize hidden states and cell states
+    h = np.zeros((N, T, H))
+    prev_h = h0
+    prev_c = np.zeros((N, H))  # Initial cell state is zero
+
+    # Initialize cache for backward pass
+    cache = []
+
+    # Loop through each timestep
+    for t in range(T):
+        # Get input for current timestep (shape: N, D)
+        xt = x[:, t, :]
+
+        # Perform LSTM step forward
+        next_h, next_c, step_cache = lstm_step_forward(xt, prev_h, prev_c, Wx, Wh, b)
+
+        # Store hidden state and update previous states
+        h[:, t, :] = next_h
+        prev_h = next_h
+        prev_c = next_c
+
+        # Store cache for this timestep
+        cache.append(step_cache)
 
     # *****END OF YOUR CODE *****
 
-    return h, cache
+    return h, tuple(cache)
 
 
 def lstm_backward(dh, cache):
@@ -403,8 +474,46 @@ def lstm_backward(dh, cache):
     # You should use the lstm_step_backward function that you just defined.     #
     #############################################################################
     # *****START OF YOUR CODE *****
+    
+    # Initialize dimensions from cache
+    N, T, H = dh.shape
+    D = cache[0][0].shape[1]  # Get D from the first x in cache
 
-    pass
+    # Initialize gradients
+    dx = np.zeros((N, T, D))
+    dh0 = np.zeros((N, H))
+    dWx = np.zeros((D, 4*H))
+    dWh = np.zeros((H, 4*H))
+    db = np.zeros((4*H,))
+
+    # Initialize gradient of next hidden state and cell state
+    dnext_h = np.zeros((N, H))
+    dnext_c = np.zeros((N, H))
+
+    # Backward pass through time
+    for t in reversed(range(T)):
+        # Add upstream gradient from dh
+        dnext_h += dh[:, t, :]
+
+        # Get cache for this timestep
+        step_cache = cache[t]
+
+        # Compute gradients for this timestep
+        dx_step, dprev_h, dprev_c, dWx_step, dWh_step, db_step = lstm_step_backward(
+            dnext_h, dnext_c, step_cache)
+
+        # Store gradients
+        dx[:, t, :] = dx_step
+        dWx += dWx_step
+        dWh += dWh_step
+        db += db_step
+
+        # Update gradients for next iteration (which is previous timestep)
+        dnext_h = dprev_h
+        dnext_c = dprev_c
+
+    # The final dprev_h is the gradient for h0
+    dh0 = dnext_h
 
     # *****END OF YOUR CODE *****
 
