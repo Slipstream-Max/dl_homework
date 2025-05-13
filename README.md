@@ -58,9 +58,5 @@ uv pip install -e .
 source .venv/bin/activate
 jupyter notebook
 ```
-3. 或Visual Studio Code
-```bash
-source .venv/bin/activate
-code .
-```
+3. 或Visual Studio Code安装Jupyter插件，打开.ipynb后选择.venv即可。
 ---
