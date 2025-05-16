@@ -45,6 +45,7 @@
 0. 确保已经安装了uv包管理工具
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
+sudo apt install python3-dev
 ```
 
 1. 安装依赖
