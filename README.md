@@ -49,8 +49,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 sudo apt install python3-dev
 ```
 
-1. 安装依赖
+1. 克隆项目/安装依赖
 ```bash
+git clone xxx
+cd dl_homework
 uv sync
 uv pip install -e .
 ```
